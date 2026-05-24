@@ -13,7 +13,7 @@ public class FireBulletOnActivate : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        XRGrabInteractable grabbable = GetComponent<XRGrabInteractable>();
+        UnityEngine.XR.Interaction.Toolkit.Interactables.XRGrabInteractable grabbable = GetComponent<UnityEngine.XR.Interaction.Toolkit.Interactables.XRGrabInteractable>();
         grabbable.activated.AddListener(FireBullet);
 
     }
