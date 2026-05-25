@@ -1,6 +1,7 @@
 // CameraManager.cs - 企业级相机管理器
 using Cinemachine;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 public class CameraManager : MonoBehaviour
 {
@@ -26,7 +27,7 @@ public class CameraManager : MonoBehaviour
 
     void Update()
     {
-        if (Input.GetKeyDown(KeyCode.V))
+        if (Keyboard.current != null && Keyboard.current.vKey.wasPressedThisFrame)
             ToggleFirstThirdPerson();
     }
 

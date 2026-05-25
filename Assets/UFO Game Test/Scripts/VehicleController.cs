@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 using Cinemachine;
 
 public class VehicleController : MonoBehaviour
@@ -21,13 +22,15 @@ public class VehicleController : MonoBehaviour
 
     void Update()
     {
+        if (Keyboard.current == null) return;
+
         // 1. 如果在区域内、没开车、按下E -> 上船
-        if (playerInZone && !isDriving && Input.GetKeyDown(KeyCode.E))
+        if (playerInZone && !isDriving && Keyboard.current.eKey.wasPressedThisFrame)
         {
             EnterVehicle();
         }
         // 2. 如果正在开车、按下E -> 下船
-        else if (isDriving && Input.GetKeyDown(KeyCode.E))
+        else if (isDriving && Keyboard.current.eKey.wasPressedThisFrame)
         {
             ExitVehicle();
         }
