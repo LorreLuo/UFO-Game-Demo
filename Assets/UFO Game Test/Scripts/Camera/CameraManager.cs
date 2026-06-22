@@ -1,5 +1,5 @@
 // CameraManager.cs - 企业级相机管理器
-using Cinemachine;
+using Unity.Cinemachine;
 using UnityEngine;
 using UnityEngine.InputSystem;
 

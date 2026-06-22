@@ -2,7 +2,7 @@
 // 挂载在Player上，设置两个VCam的Follow/LookAt目标
 
 using UnityEngine;
-using Cinemachine;
+using Unity.Cinemachine;
 
 public class PlayerCameraSetup : MonoBehaviour
 {
