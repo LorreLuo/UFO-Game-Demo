@@ -1,74 +1,74 @@
-# Weapon Equipment System Design
+# 武器装备系统设计
 
-## Goal
+## 目标
 
-Add a weapon equipment system that supports one equipped one-handed sword now while preserving clean extension points for multiple weapons, shields, two-handed weapons, bows, and inventory-driven equipment later.
+新增一套武器装备系统，当前支持装备一把单手剑，同时为后续扩展多种武器、盾牌、双手武器、弓以及由背包系统驱动的装备切换保留清晰边界。
 
-The weapon prefab is instantiated once when equipped. Drawing and sheathing move the same runtime instance between the character's existing `WeaponHolder` and `SheathHolder` transforms.
+武器在装备时只实例化一次。拔剑和收剑过程中，不重复创建或销毁武器，而是在角色现有的 `WeaponHolder` 与 `SheathHolder` 挂点之间移动同一个运行时实例。
 
-## Current Context
+## 当前项目基础
 
-The combat character architecture already provides:
+现有角色战斗架构已经提供：
 
-- `PlayerCharacterController` as the composition root.
-- Draw and sheath character states driven by the `drawWeapon` and `sheathWeapon` Animator triggers.
-- `CharacterBlackboard.IsWeaponDrawn` as the combat stance flag.
-- `WeaponHitbox`, `DamageInfo`, and `IDamageable` as initial damage contracts.
+- `PlayerCharacterController`：角色系统的组合入口。
+- `DrawWeaponState` 和 `SheathWeaponState`：由 Animator 的 `drawWeapon`、`sheathWeapon` Trigger 驱动拔剑和收剑。
+- `CharacterBlackboard.IsWeaponDrawn`：记录角色当前是否处于持剑状态。
+- `WeaponHitbox`、`DamageInfo` 和 `IDamageable`：初步的伤害与命中契约。
 
-The character rig already contains:
+角色骨骼中已经存在：
 
-- `SheathHolder`: the sword's sheathed position near the hips.
-- `WeaponHolder`: the sword's held position on the hand.
+- `SheathHolder`：位于 Hip 附近的收剑挂点。
+- `WeaponHolder`：位于手部的持剑挂点。
 
-The current system does not instantiate, equip, unequip, or reposition weapon prefabs.
+目前系统还不具备武器预设体的实例化、装备、卸下和挂点切换能力。
 
-## Design Principles
+## 设计原则
 
-- Instantiate an equipped weapon once and retain its runtime state.
-- Do not create or destroy the weapon when drawing or sheathing.
-- Use animation events for visually accurate attachment timing.
-- Keep weapon data separate from the runtime weapon instance.
-- Keep equipment ownership separate from character movement and Animator control.
-- Make attachment operations idempotent so duplicate animation events are harmless.
-- Treat the current one-handed sword as the first supported weapon category, not as a hard-coded special case.
+- 装备武器时只创建一个实例，并保留它的运行时状态。
+- 拔剑和收剑时不创建或销毁武器。
+- 使用 Animation Event 在准确动画帧切换武器挂点。
+- 武器静态数据与运行时武器实例分离。
+- 装备管理不负责角色移动和 Animator 状态控制。
+- 挂点切换操作必须具备幂等性，重复动画事件不会产生副作用。
+- 当前单手剑作为首个受支持的武器类型，不在代码中写成无法扩展的特殊情况。
 
-## Runtime Components
+## 运行时组件
 
 ### WeaponDefinition
 
-`WeaponDefinition` is a `ScriptableObject` containing stable weapon configuration:
+`WeaponDefinition` 使用 `ScriptableObject` 保存稳定的武器配置：
 
-- Display name.
-- Weapon identifier.
-- Weapon category.
-- Weapon prefab.
-- Base damage.
-- Optional hand and sheath local position/rotation overrides.
+- 显示名称。
+- 武器唯一标识。
+- 武器类型。
+- 武器预设体。
+- 基础伤害。
+- 可选的手部和剑鞘本地位置、旋转偏移。
 
-The first weapon category is `OneHandedSword`. The category enum may reserve future values such as `Shield`, `TwoHandedWeapon`, and `Bow`, but no behavior for those categories is implemented in this pass.
+首个武器类型为 `OneHandedSword`。武器类型枚举可以预留 `Shield`、`TwoHandedWeapon`、`Bow` 等值，但本阶段不实现这些类型的具体行为。
 
 ### EquippedWeapon
 
-`EquippedWeapon` is attached to the root of each equippable weapon prefab. It exposes:
+`EquippedWeapon` 挂载在每个可装备武器预设体的根节点上，负责暴露：
 
-- Its `WeaponHitbox`.
-- Its active `WeaponDefinition`.
-- Its current attachment state.
-- Initialization with the owning character and definition.
-- Attack-window forwarding methods.
+- 对应的 `WeaponHitbox`。
+- 当前使用的 `WeaponDefinition`。
+- 当前挂点状态。
+- 使用武器拥有者和武器定义进行初始化。
+- 转发攻击命中窗口的开启和关闭。
 
-It does not read player input or control character animation.
+`EquippedWeapon` 不读取玩家输入，也不控制角色动画。
 
 ### CharacterEquipmentController
 
-`CharacterEquipmentController` is attached to the player and owns:
+`CharacterEquipmentController` 挂载在玩家对象上，负责管理：
 
-- `WeaponHolder`.
-- `SheathHolder`.
-- The currently equipped `WeaponDefinition`.
-- The currently spawned `EquippedWeapon`.
+- `WeaponHolder`。
+- `SheathHolder`。
+- 当前装备的 `WeaponDefinition`。
+- 当前生成的 `EquippedWeapon`。
 
-Its public API is:
+公开接口如下：
 
 ```csharp
 bool Equip(WeaponDefinition definition)
@@ -79,28 +79,32 @@ void BeginAttackWindow()
 void EndAttackWindow()
 ```
 
-`Equip` first validates the definition and prefab, creates and initializes a candidate instance, and only then replaces the previous equipped instance. A failed equip request leaves the current weapon unchanged. After a successful replacement, the new weapon attaches according to the character's current weapon-drawn state.
+`Equip` 首先验证武器定义和预设体，再创建并初始化候选武器实例。只有候选实例初始化成功后，才替换并销毁旧武器。装备失败时，当前武器保持不变。
 
-`AttachWeaponToHand` and `AttachWeaponToSheath` reparent the existing weapon using `Transform.SetParent(holder, false)` and apply the configured local offsets.
+装备成功后，新武器根据角色当前的拔剑状态连接到手部或剑鞘挂点。
 
-## Character Integration
+`AttachWeaponToHand` 和 `AttachWeaponToSheath` 使用 `Transform.SetParent(holder, false)` 重新设置现有武器实例的父节点，并应用武器定义中的本地偏移。
 
-`PlayerCharacterController` receives or resolves a `CharacterEquipmentController` reference and exposes it to states and animation events.
+## 与角色控制系统的集成
 
-The draw and sheath state machine remains responsible for combat intent:
+`PlayerCharacterController` 获取或自动查找 `CharacterEquipmentController`，并将其提供给角色状态和动画事件桥接组件。
 
-- Entering `DrawWeaponState` triggers the draw animation.
-- An animation event calls `AttachWeaponToHand`.
-- The state completes and sets `IsWeaponDrawn = true`.
-- Entering `SheathWeaponState` triggers the sheath animation.
-- An animation event calls `AttachWeaponToSheath`.
-- The state completes and sets `IsWeaponDrawn = false`.
+拔剑和收剑状态机继续负责角色的战斗意图：
 
-The equipment system does not decide when the player enters combat locomotion.
+- 进入 `DrawWeaponState` 时触发拔剑动画。
+- Animation Event 调用 `AttachWeaponToHand`。
+- 拔剑状态结束后，将 `IsWeaponDrawn` 设置为 `true`。
+- 进入 `SheathWeaponState` 时触发收剑动画。
+- Animation Event 调用 `AttachWeaponToSheath`。
+- 收剑状态结束后，将 `IsWeaponDrawn` 设置为 `false`。
 
-## Animation Event Bridge
+装备系统不负责决定角色何时进入或退出战斗移动状态。
 
-Animation clips must not depend directly on internal state classes. Public animation-event methods are exposed from a stable `CharacterAnimationEvents` component attached to the same GameObject as the Animator:
+## 动画事件桥接
+
+动画片段不直接依赖角色内部状态类。新增稳定的 `CharacterAnimationEvents` 组件，并将其挂载到 Animator 所在的 GameObject 上。
+
+它公开以下 Animation Event 方法：
 
 ```csharp
 void AttachWeaponToHand()
@@ -109,90 +113,91 @@ void BeginWeaponAttackWindow()
 void EndWeaponAttackWindow()
 ```
 
-The component forwards each event to `CharacterEquipmentController`.
+这些方法只负责将动画事件转发给 `CharacterEquipmentController`。
 
-Required event placement:
+动画事件放置规则：
 
-- Draw animation: `AttachWeaponToHand` on the frame where the hand takes control of the sword.
-- Sheath animation: `AttachWeaponToSheath` on the frame where the sword enters the sheath.
-- Future attack animations: begin and end attack-window events around damaging frames.
+- 拔剑动画：在手部真正接管剑的帧调用 `AttachWeaponToHand`。
+- 收剑动画：在剑进入剑鞘的帧调用 `AttachWeaponToSheath`。
+- 后续攻击动画：在具备伤害效果的动画帧区间调用攻击窗口开始和结束事件。
 
-Missing equipment or holder references produce one clear warning and safely ignore the event instead of throwing an exception.
+如果装备控制器或挂点引用缺失，系统只输出一次明确警告并安全忽略事件，不抛出异常。
 
-## Prefab Contract
+## 武器预设体契约
 
-Each weapon prefab must have:
+每个武器预设体必须具有：
 
-- `EquippedWeapon` on its root.
-- A child collider covering the blade.
-- `WeaponHitbox` on the collider object.
-- The hitbox collider configured as a trigger.
-- No Rigidbody-driven movement controlling the weapon while equipped.
+- 根节点上的 `EquippedWeapon`。
+- 覆盖剑刃范围的子物体 Collider。
+- 挂载在 Collider 对象上的 `WeaponHitbox`。
+- 设置为 Trigger 的命中 Collider。
+- 装备期间不使用 Rigidbody 驱动武器运动。
 
-The weapon pivot should be authored near the grip. Per-weapon local offsets remain available when imported pivots are unsuitable.
+武器模型的 Pivot 应尽量位于握把附近。如果导入模型的 Pivot 不合适，可以通过 `WeaponDefinition` 中的本地位置和旋转偏移进行修正。
 
-## Initial Scene Setup
+## 初始场景配置
 
-The player receives:
+玩家对象需要配置：
 
-- `CharacterEquipmentController`.
-- `CharacterAnimationEvents`.
-- `WeaponHolder` assigned from the hand bone hierarchy.
-- `SheathHolder` assigned from the hip hierarchy.
-- An initial one-handed sword `WeaponDefinition`.
+- `CharacterEquipmentController`。
+- `CharacterAnimationEvents`。
+- 指向手部骨骼层级中 `WeaponHolder` 的引用。
+- 指向 Hip 骨骼层级中 `SheathHolder` 的引用。
+- 初始单手剑对应的 `WeaponDefinition`。
 
-At startup, the initial sword is equipped once and attached to `SheathHolder` unless `startsWithWeaponDrawn` is enabled.
+游戏启动时，系统只装备一次初始武器。默认将武器连接到 `SheathHolder`；如果启用了 `startsWithWeaponDrawn`，则连接到 `WeaponHolder`。
 
-## Future Multiple-Weapon Extension
+## 后续多武器扩展
 
-This pass supports one active weapon slot. Future inventory work can add slot identifiers and loadout data without changing weapon prefab behavior:
+本阶段只支持一个激活武器槽位。未来加入背包和配装系统时，可以增加装备槽位标识和 Loadout 数据，而不需要修改武器预设体自身的职责：
 
 ```text
-Equipment Slot
+装备槽位
   -> WeaponDefinition
-  -> EquippedWeapon runtime instance
-  -> Holder selected by category and stance
+  -> EquippedWeapon 运行时实例
+  -> 根据武器类型和角色状态选择挂点
 ```
 
-Future dual-wield or sword-and-shield support will add separate main-hand and off-hand slots. It should not overload the current single active slot with special-case booleans.
+未来实现双持或剑盾系统时，增加独立的主手和副手槽位，不在当前单槽位中堆叠特殊布尔变量。
 
-## Error Handling
+## 错误处理
 
-- Reject a null `WeaponDefinition`.
-- Reject definitions without a prefab.
-- Reject prefabs without `EquippedWeapon`.
-- Validate that both holders are assigned.
-- Prevent attack windows while no weapon is equipped.
-- Disable the hitbox after initialization, attachment changes, unequip, and component disable.
-- Ignore repeated requests to attach to the holder already in use.
+- 拒绝空的 `WeaponDefinition`。
+- 拒绝没有配置预设体的武器定义。
+- 拒绝缺少 `EquippedWeapon` 的武器预设体。
+- 验证 `WeaponHolder` 和 `SheathHolder` 是否已经赋值。
+- 未装备武器时禁止开启攻击命中窗口。
+- 初始化、切换挂点、卸下武器以及组件禁用时，确保命中 Collider 处于关闭状态。
+- 重复请求连接到当前挂点时不执行多余操作。
+- 新武器装备失败时保留当前武器。
 
-## Testing Strategy
+## 测试策略
 
-Edit Mode tests cover deterministic equipment behavior:
+Edit Mode 测试覆盖可确定的装备行为：
 
-- Equipping creates exactly one runtime weapon.
-- Drawing and sheathing reparent the same instance.
-- Repeated attachment calls do not create new instances.
-- Equipping a replacement removes the previous instance.
-- Null or invalid definitions fail without changing the current equipment.
-- Attack-window forwarding targets the equipped weapon hitbox.
+- 装备操作只生成一个运行时武器实例。
+- 拔剑和收剑只改变同一个武器实例的父节点。
+- 重复挂点切换不会生成新实例。
+- 装备新武器后正确移除旧实例。
+- 空定义或无效定义不会改变当前装备。
+- 攻击窗口调用会转发到当前武器的 `WeaponHitbox`。
 
-Unity Play Mode verification covers:
+Unity Play Mode 验证：
 
-- Initial sword appears at `SheathHolder`.
-- Draw animation moves it to `WeaponHolder` on the authored event frame.
-- Sheath animation returns it to `SheathHolder`.
-- Movement and combat animation continue normally after attachment changes.
-- The weapon remains aligned with both holders during animation.
+- 初始单手剑正确显示在 `SheathHolder`。
+- 拔剑动画在指定事件帧将剑移动到 `WeaponHolder`。
+- 收剑动画在指定事件帧将剑移回 `SheathHolder`。
+- 切换挂点后，角色移动和战斗动画仍能正常工作。
+- 武器在拔剑和收剑动画过程中始终与对应挂点保持正确对齐。
 
-## Out Of Scope
+## 本阶段不包含
 
-- Inventory UI.
-- Item pickup and world drops.
-- Saving and loading equipment.
-- Weapon durability.
-- Weapon statistics beyond base damage.
-- Combo definitions.
-- Multiple simultaneous weapon slots.
-- NPC equipment AI.
-- Procedural hand IK.
+- 背包和装备 UI。
+- 场景拾取与武器掉落。
+- 装备存档和读取。
+- 武器耐久度。
+- 基础伤害以外的完整武器属性。
+- 连招数据。
+- 同时装备多个武器槽位。
+- NPC 装备决策。
+- 程序化手部 IK。
