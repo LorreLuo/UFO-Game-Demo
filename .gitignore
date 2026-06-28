@@ -5,6 +5,7 @@ Build/
 Builds/
 Logs/
 UserSettings/
+.worktrees/
 .vs/
 *.csproj
 *.sln
