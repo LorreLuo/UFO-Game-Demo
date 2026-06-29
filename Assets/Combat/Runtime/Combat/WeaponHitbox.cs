@@ -4,22 +4,40 @@ using UnityEngine;
 [RequireComponent(typeof(Collider))]
 public sealed class WeaponHitbox : MonoBehaviour
 {
-    [SerializeField] private int damage = 1;
-    [SerializeField] private GameObject owner;
-
     private readonly HashSet<IDamageable> _hitTargets = new HashSet<IDamageable>();
     private Collider _collider;
+    private GameObject _owner;
+    private int _damage;
     private bool _active;
+
+    public GameObject Owner => _owner;
+    public int Damage => _damage;
+    public bool IsAttackWindowActive => _active;
 
     private void Awake()
     {
         _collider = GetComponent<Collider>();
         _collider.isTrigger = true;
-        _collider.enabled = false;
+        ForceDisable();
+    }
+
+    private void OnDisable()
+    {
+        ForceDisable();
+    }
+
+    public void Initialize(GameObject owner, int damage)
+    {
+        _owner = owner;
+        _damage = Mathf.Max(0, damage);
+        ForceDisable();
     }
 
     public void BeginAttackWindow()
     {
+        if (_collider == null)
+            return;
+
         _hitTargets.Clear();
         _active = true;
         _collider.enabled = true;
@@ -27,8 +45,16 @@ public sealed class WeaponHitbox : MonoBehaviour
 
     public void EndAttackWindow()
     {
+        ForceDisable();
+    }
+
+    public void ForceDisable()
+    {
         _active = false;
-        _collider.enabled = false;
+        _hitTargets.Clear();
+
+        if (_collider != null)
+            _collider.enabled = false;
     }
 
     private void OnTriggerEnter(Collider other)
@@ -43,6 +69,7 @@ public sealed class WeaponHitbox : MonoBehaviour
         _hitTargets.Add(damageable);
         Vector3 hitPoint = other.ClosestPoint(transform.position);
         Vector3 direction = (other.transform.position - transform.position).normalized;
-        damageable.TakeDamage(new DamageInfo(owner != null ? owner : gameObject, damage, hitPoint, direction));
+        GameObject source = _owner != null ? _owner : gameObject;
+        damageable.TakeDamage(new DamageInfo(source, _damage, hitPoint, direction));
     }
 }

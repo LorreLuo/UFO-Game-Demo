@@ -5,6 +5,26 @@ using UnityEngine;
 public class WeaponEquipmentTests
 {
     [Test]
+    public void WeaponHitboxInitializesDisabledWithConfiguredDamage()
+    {
+        GameObject owner = new GameObject("Owner");
+        GameObject hitboxObject = new GameObject("Hitbox");
+        BoxCollider collider = hitboxObject.AddComponent<BoxCollider>();
+        WeaponHitbox hitbox = hitboxObject.AddComponent<WeaponHitbox>();
+
+        hitbox.Initialize(owner, 15);
+
+        Assert.IsTrue(collider.isTrigger);
+        Assert.IsFalse(collider.enabled);
+        Assert.AreEqual(15, hitbox.Damage);
+        Assert.AreSame(owner, hitbox.Owner);
+        Assert.IsFalse(hitbox.IsAttackWindowActive);
+
+        Object.DestroyImmediate(hitboxObject);
+        Object.DestroyImmediate(owner);
+    }
+
+    [Test]
     public void WeaponDefinitionExposesConfiguredRuntimeData()
     {
         GameObject prefab = new GameObject("SwordPrefab");
