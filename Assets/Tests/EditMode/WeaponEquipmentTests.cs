@@ -5,6 +5,33 @@ using UnityEngine;
 public class WeaponEquipmentTests
 {
     [Test]
+    public void EquippedWeaponMovesSameInstanceBetweenHolders()
+    {
+        GameObject owner = new GameObject("Owner");
+        GameObject sheath = new GameObject("SheathHolder");
+        GameObject hand = new GameObject("WeaponHolder");
+        GameObject weaponObject = CreateWeaponObject();
+        EquippedWeapon weapon = weaponObject.GetComponent<EquippedWeapon>();
+        WeaponDefinition definition = CreateDefinition(weaponObject, 10);
+
+        weapon.Initialize(owner, definition);
+        weapon.AttachTo(sheath.transform, default, WeaponAttachmentPoint.Sheath);
+        EquippedWeapon original = weapon;
+
+        weapon.AttachTo(hand.transform, default, WeaponAttachmentPoint.Hand);
+
+        Assert.AreSame(original, weapon);
+        Assert.AreSame(hand.transform, weapon.transform.parent);
+        Assert.AreEqual(WeaponAttachmentPoint.Hand, weapon.AttachmentPoint);
+
+        Object.DestroyImmediate(definition);
+        Object.DestroyImmediate(weaponObject);
+        Object.DestroyImmediate(hand);
+        Object.DestroyImmediate(sheath);
+        Object.DestroyImmediate(owner);
+    }
+
+    [Test]
     public void WeaponHitboxInitializesDisabledWithConfiguredDamage()
     {
         GameObject owner = new GameObject("Owner");
@@ -54,5 +81,29 @@ public class WeaponEquipmentTests
 
         Assert.IsNotNull(field, "Missing field: " + fieldName);
         field.SetValue(target, value);
+    }
+
+    private static GameObject CreateWeaponObject()
+    {
+        GameObject weaponObject = new GameObject("Weapon");
+        EquippedWeapon weapon = weaponObject.AddComponent<EquippedWeapon>();
+
+        GameObject hitboxObject = new GameObject("Hitbox");
+        hitboxObject.transform.SetParent(weaponObject.transform, false);
+        hitboxObject.AddComponent<BoxCollider>();
+        WeaponHitbox hitbox = hitboxObject.AddComponent<WeaponHitbox>();
+        SetField(weapon, "hitbox", hitbox);
+
+        return weaponObject;
+    }
+
+    private static WeaponDefinition CreateDefinition(GameObject prefab, int damage)
+    {
+        WeaponDefinition definition = ScriptableObject.CreateInstance<WeaponDefinition>();
+        SetField(definition, "weaponId", "test_weapon");
+        SetField(definition, "displayName", "Test Weapon");
+        SetField(definition, "weaponPrefab", prefab);
+        SetField(definition, "baseDamage", damage);
+        return definition;
     }
 }
