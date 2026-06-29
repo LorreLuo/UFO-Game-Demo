@@ -5,6 +5,28 @@ using UnityEngine;
 public class WeaponEquipmentTests
 {
     [Test]
+    public void PlayerControllerRequiresEquipmentController()
+    {
+        object[] attributes = typeof(PlayerCharacterController).GetCustomAttributes(
+            typeof(RequireComponent),
+            inherit: true);
+
+        bool requiresEquipment = false;
+        foreach (RequireComponent attribute in attributes)
+        {
+            if (attribute.m_Type0 == typeof(CharacterEquipmentController)
+                || attribute.m_Type1 == typeof(CharacterEquipmentController)
+                || attribute.m_Type2 == typeof(CharacterEquipmentController))
+            {
+                requiresEquipment = true;
+                break;
+            }
+        }
+
+        Assert.IsTrue(requiresEquipment);
+    }
+
+    [Test]
     public void AnimationEventsForwardAttachmentCommands()
     {
         GameObject character = new GameObject("Character");

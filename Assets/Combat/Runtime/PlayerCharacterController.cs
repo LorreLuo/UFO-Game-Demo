@@ -2,12 +2,14 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 
 [RequireComponent(typeof(CharacterController))]
+[RequireComponent(typeof(CharacterEquipmentController))]
 public class PlayerCharacterController : MonoBehaviour
 {
     [Header("References")]
     [SerializeField] private Animator animator;
     [SerializeField] private Transform cameraTransform;
     [SerializeField] private PlayerInput playerInput;
+    [SerializeField] private CharacterEquipmentController equipment;
 
     [Header("Movement")]
     [SerializeField] private float walkSpeed = 3.5f;
@@ -36,6 +38,7 @@ public class PlayerCharacterController : MonoBehaviour
     public CharacterMotor Motor { get; private set; }
     public CharacterAnimatorDriver AnimatorDriver { get; private set; }
     public CharacterCombatController Combat { get; private set; }
+    public CharacterEquipmentController Equipment => equipment;
     public CharacterStateMachine StateMachine { get; private set; }
 
     public float WalkSpeed => walkSpeed;
@@ -75,7 +78,11 @@ public class PlayerCharacterController : MonoBehaviour
         if (playerInput == null)
             playerInput = GetComponent<PlayerInput>();
 
+        if (equipment == null)
+            equipment = GetComponent<CharacterEquipmentController>();
+
         Blackboard = new CharacterBlackboard { IsWeaponDrawn = startsWithWeaponDrawn };
+        equipment.Initialize(startsWithWeaponDrawn);
         _inputReader = new PlayerInputReader(playerInput);
         Motor = new CharacterMotor(controller, transform, cameraTransform, gravity, groundedStickForce, rotationDampTime);
         AnimatorDriver = new CharacterAnimatorDriver(animator);
