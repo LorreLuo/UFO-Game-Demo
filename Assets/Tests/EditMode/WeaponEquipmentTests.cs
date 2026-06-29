@@ -5,6 +5,40 @@ using UnityEngine;
 public class WeaponEquipmentTests
 {
     [Test]
+    public void AnimationEventsForwardAttachmentCommands()
+    {
+        GameObject character = new GameObject("Character");
+        GameObject sheath = new GameObject("SheathHolder");
+        GameObject hand = new GameObject("WeaponHolder");
+        sheath.transform.SetParent(character.transform, false);
+        hand.transform.SetParent(character.transform, false);
+
+        CharacterEquipmentController equipment =
+            character.AddComponent<CharacterEquipmentController>();
+        SetField(equipment, "sheathHolder", sheath.transform);
+        SetField(equipment, "weaponHolder", hand.transform);
+
+        CharacterAnimationEvents events =
+            character.AddComponent<CharacterAnimationEvents>();
+        SetField(events, "equipment", equipment);
+
+        GameObject prefab = CreateWeaponObject();
+        WeaponDefinition definition = CreateDefinition(prefab, 10);
+        equipment.Initialize(false);
+        equipment.Equip(definition);
+
+        events.AttachWeaponToHand();
+        Assert.AreSame(hand.transform, equipment.CurrentWeapon.transform.parent);
+
+        events.AttachWeaponToSheath();
+        Assert.AreSame(sheath.transform, equipment.CurrentWeapon.transform.parent);
+
+        Object.DestroyImmediate(definition);
+        Object.DestroyImmediate(prefab);
+        Object.DestroyImmediate(character);
+    }
+
+    [Test]
     public void EquipmentControllerReusesWeaponWhenDrawingAndSheathing()
     {
         GameObject character = new GameObject("Character");
