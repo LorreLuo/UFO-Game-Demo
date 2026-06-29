@@ -5,6 +5,70 @@ using UnityEngine;
 public class WeaponEquipmentTests
 {
     [Test]
+    public void EquipmentControllerReusesWeaponWhenDrawingAndSheathing()
+    {
+        GameObject character = new GameObject("Character");
+        GameObject sheath = new GameObject("SheathHolder");
+        GameObject hand = new GameObject("WeaponHolder");
+        sheath.transform.SetParent(character.transform, false);
+        hand.transform.SetParent(character.transform, false);
+
+        CharacterEquipmentController equipment =
+            character.AddComponent<CharacterEquipmentController>();
+        SetField(equipment, "sheathHolder", sheath.transform);
+        SetField(equipment, "weaponHolder", hand.transform);
+
+        GameObject prefab = CreateWeaponObject();
+        WeaponDefinition definition = CreateDefinition(prefab, 10);
+
+        equipment.Initialize(false);
+        Assert.IsTrue(equipment.Equip(definition));
+        EquippedWeapon instance = equipment.CurrentWeapon;
+        Assert.AreSame(sheath.transform, instance.transform.parent);
+
+        Assert.IsTrue(equipment.AttachWeaponToHand());
+        Assert.IsTrue(equipment.AttachWeaponToSheath());
+
+        Assert.AreSame(instance, equipment.CurrentWeapon);
+        Assert.AreSame(sheath.transform, instance.transform.parent);
+
+        Object.DestroyImmediate(definition);
+        Object.DestroyImmediate(prefab);
+        Object.DestroyImmediate(character);
+    }
+
+    [Test]
+    public void InvalidReplacementKeepsCurrentWeapon()
+    {
+        GameObject character = new GameObject("Character");
+        GameObject sheath = new GameObject("SheathHolder");
+        GameObject hand = new GameObject("WeaponHolder");
+        sheath.transform.SetParent(character.transform, false);
+        hand.transform.SetParent(character.transform, false);
+
+        CharacterEquipmentController equipment =
+            character.AddComponent<CharacterEquipmentController>();
+        SetField(equipment, "sheathHolder", sheath.transform);
+        SetField(equipment, "weaponHolder", hand.transform);
+
+        GameObject validPrefab = CreateWeaponObject();
+        WeaponDefinition validDefinition = CreateDefinition(validPrefab, 10);
+        WeaponDefinition invalidDefinition = ScriptableObject.CreateInstance<WeaponDefinition>();
+
+        equipment.Initialize(false);
+        Assert.IsTrue(equipment.Equip(validDefinition));
+        EquippedWeapon original = equipment.CurrentWeapon;
+
+        Assert.IsFalse(equipment.Equip(invalidDefinition));
+        Assert.AreSame(original, equipment.CurrentWeapon);
+
+        Object.DestroyImmediate(invalidDefinition);
+        Object.DestroyImmediate(validDefinition);
+        Object.DestroyImmediate(validPrefab);
+        Object.DestroyImmediate(character);
+    }
+
+    [Test]
     public void EquippedWeaponMovesSameInstanceBetweenHolders()
     {
         GameObject owner = new GameObject("Owner");
