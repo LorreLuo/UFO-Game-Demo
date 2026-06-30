@@ -13,13 +13,13 @@ public sealed class CharacterAnimationEvents : MonoBehaviour
             equipment = GetComponentInParent<CharacterEquipmentController>();
     }
 
-    public void AttachWeaponToHand()
+    public void DrawWeapon()
     {
         if (TryGetEquipment())
             equipment.AttachWeaponToHand();
     }
 
-    public void AttachWeaponToSheath()
+    public void SheathWeapon()
     {
         if (TryGetEquipment())
             equipment.AttachWeaponToSheath();

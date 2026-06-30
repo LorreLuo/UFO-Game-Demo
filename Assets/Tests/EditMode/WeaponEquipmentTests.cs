@@ -1,9 +1,25 @@
 using System.Reflection;
 using NUnit.Framework;
 using UnityEngine;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 public class WeaponEquipmentTests
 {
+#if UNITY_EDITOR
+    [Test]
+    public void PlayerPrefabHasAnimationEventReceiverOnAnimatorObject()
+    {
+        GameObject playerPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+            "Assets/Combat/Prefebs/Player.prefab");
+
+        Assert.IsNotNull(playerPrefab);
+        Assert.IsNotNull(playerPrefab.GetComponent<Animator>());
+        Assert.IsNotNull(playerPrefab.GetComponent<CharacterAnimationEvents>());
+    }
+#endif
+
     [Test]
     public void PlayerControllerRequiresEquipmentController()
     {
@@ -49,10 +65,10 @@ public class WeaponEquipmentTests
         equipment.Initialize(false);
         equipment.Equip(definition);
 
-        events.AttachWeaponToHand();
+        events.DrawWeapon();
         Assert.AreSame(hand.transform, equipment.CurrentWeapon.transform.parent);
 
-        events.AttachWeaponToSheath();
+        events.SheathWeapon();
         Assert.AreSame(sheath.transform, equipment.CurrentWeapon.transform.parent);
 
         Object.DestroyImmediate(definition);

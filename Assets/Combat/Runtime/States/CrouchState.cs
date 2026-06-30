@@ -7,20 +7,25 @@ public sealed class CrouchState : CharacterStateBase
 
     public override void Enter()
     {
-        Character.AnimatorDriver.Trigger(CharacterAnimatorDriver.CrouchHash);
+        Character.AnimatorDriver.SetBool(CharacterAnimatorDriver.IsCrouchingHash, true);
         Character.Motor.SetColliderHeight(Character.CrouchingHeight);
     }
 
     public override void HandleInput(float deltaTime)
     {
-        if (Character.InputSnapshot.CrouchPressed)
+        if (Character.InputSnapshot.CrouchPressed
+            && Character.Motor.HasStandingClearance(Character.StandingHeight))
+        {
             StateMachine.ChangeState(Character.GroundedLocomotion);
+        }
     }
 
     public override void Tick(float deltaTime)
     {
-        float speedValue = Character.InputSnapshot.Move.magnitude <= 0.01f ? 0f : 0.25f;
-        Character.AnimatorDriver.SetSpeed(speedValue, Character.SpeedDampTime, deltaTime);
+        Character.AnimatorDriver.SetSpeed(
+            Character.InputSnapshot.Move.magnitude,
+            Character.SpeedDampTime,
+            deltaTime);
     }
 
     public override void FixedTick(float fixedDeltaTime)
@@ -30,6 +35,7 @@ public sealed class CrouchState : CharacterStateBase
 
     public override void Exit()
     {
+        Character.AnimatorDriver.SetBool(CharacterAnimatorDriver.IsCrouchingHash, false);
         Character.Motor.SetColliderHeight(Character.StandingHeight);
     }
 }

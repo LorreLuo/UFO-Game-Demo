@@ -6,7 +6,7 @@ public sealed class CharacterAnimatorDriver
     public static readonly int SpeedHash = Animator.StringToHash("speed");
     public static readonly int JumpHash = Animator.StringToHash("jump");
     public static readonly int LandHash = Animator.StringToHash("land");
-    public static readonly int CrouchHash = Animator.StringToHash("crouch");
+    public static readonly int IsCrouchingHash = Animator.StringToHash("isCrouching");
     public static readonly int SprintJumpHash = Animator.StringToHash("sprintJump");
     public static readonly int DrawWeaponHash = Animator.StringToHash("drawWeapon");
     public static readonly int SheathWeaponHash = Animator.StringToHash("sheathWeapon");
@@ -37,6 +37,15 @@ public sealed class CharacterAnimatorDriver
             return false;
 
         _animator.SetTrigger(parameterHash);
+        return true;
+    }
+
+    public bool SetBool(int parameterHash, bool value)
+    {
+        if (_animator == null || !_parameters.Has(parameterHash, AnimatorControllerParameterType.Bool))
+            return false;
+
+        _animator.SetBool(parameterHash, value);
         return true;
     }
 
